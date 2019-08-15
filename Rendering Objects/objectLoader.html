@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Assignment 1</title>
+    <script  src="https://threejs.org/build/three.js"></script>
+    <script  src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+    <script src='https://threejs.org/examples/js/libs/dat.gui.min.js'></script>
+    <script  src= "https://threejs.org/examples/js/loaders/OBJLoader.js"> </script>
+    <script src= "https://threejs.org/examples/js/loaders/MTLLoader.js"> </script>
+
+
+    <script>
+      function mainFunction()
+      {
+        let renderer = new THREE.WebGLRenderer( { antialias: true } );
+        let scene = new THREE.Scene();
+        let aspect = window.innerWidth / window.innerHeight;
+        let camera = new THREE.PerspectiveCamera( 50, aspect, 1, 1000 );
+        let cameraControls = new THREE.OrbitControls( camera, renderer.domElement  );
+        let mtlLoader = new THREE.MTLLoader();
+        let keyLight = new THREE.AmbientLight(0xFFFFFF, 1.0);
+        var bBox = new THREE.Box3();
+        var boxCenter = new THREE.Vector3();
+        var boxSize = new THREE.Vector3();
+        var boxDiagonal;
+
+        /* MAKE A CUBE
+        let geometry = new THREE.BoxGeometry(10, 10, 10);
+        let material = new THREE.MeshBasicMaterial({color: 0xFF0000, wireframe: false});
+        let cube = new THREE.Mesh(geometry, material);
+        */
+
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        renderer.setPixelRatio( window.devicePixelRatio );
+        renderer.setClearColor (0x999999, 1);
+        document.body.appendChild( renderer.domElement );
+
+        let fillLight = new THREE.DirectionalLight(0xFFFFFF, 1);
+        let backLight = new THREE.DirectionalLight(0xFFFFFF, 1);
+        let sideLight = new THREE.DirectionalLight(0x00FF00, 100);
+        let otherSideLight = new THREE.DirectionalLight(0x000FF, 100);
+        let topLight = new THREE.DirectionalLight(0xFFFFFF, 1);
+
+        render = function ()
+        {
+          renderer.render( scene, camera );
+        };
+
+        function loadObject(objPath, mtlPath)
+        {
+          mtlLoader.load(mtlPath,
+          function(mtl)
+          {
+            let objLoader = new THREE.OBJLoader();
+            objLoader.setMaterials(mtl);
+            objLoader.load(objPath, function(object)
+            {
+              scene.add(object);
+
+              bBox.setFromObject(obj);
+              bBox.getCenter(boxCenter);
+              bBox.getSize(boxSize);
+              boxDiagonal = boxSize.length();
+
+              camera.position.z = boxCenter.z + 1.5 * boxDiagonal;
+              camera.lookAt(boxCenter);
+              camera.far = boxDiagonal * 5;
+              camera.updateProjectionMatrix();
+              cameraControls.target = boxCenter;
+              fillLight.position.set(boxCenter.x, boxCenter.y, boxCenter.z + 1.5 * boxDiagonal);
+              backLight.position.set(boxCenter.x, boxCenter.y, boxCenter.z - 1.5 * boxDiagonal);
+              topLight.position.set(boxCenter.x, boxCenter.y + 1.5 * boxDiagonal, boxCenter.z);
+              sideLight.position.set(boxCenter.x + 1.5 * boxDiagonal, boxCenter.y, boxCenter.z);
+              otherSideLight.position.set(boxCenter.x - 1.5 * boxDiagonal, boxCenter.y, boxCenter.z);
+
+              render();
+            });
+          }
+          );
+        }
+
+        function resize ()
+        {
+          renderer.setSize(window.innerWidth, window.innerHeight);
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.position.z = boxCenter.z + 1.5 * boxDiagonal;
+          camera.lookAt(boxCenter);
+          camera.far = boxDiagonal * 5;
+          cameraControls.target = boxCenter;
+          camera.updateProjectionMatrix();
+          render();
+        };
+
+        scene.add(camera);
+        scene.add(keyLight);
+        scene.add(backLight);
+        scene.add(fillLight);
+        scene.add(topLight);
+        scene.add(sideLight);
+        scene.add(otherSideLight);
+
+        loadObject('./Avent.obj', './Avent.mtl');
+        cameraControls.addEventListener("change", render, false);
+        window.addEventListener("resize", resize, false);
+
+        render();
+      }
+    </script>
+  </head>
+  <body onload="mainFunction();">
+  <h1>Jacob Knudson: 3605742 https://free3d.com/3d-model/lamborghini-aventador-42591.html</h1>
+  </body>
+</html>
