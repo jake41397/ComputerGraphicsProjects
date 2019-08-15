@@ -1,0 +1,332 @@
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+  <title>Bubble Sort</title>
+  <script  src="https://threejs.org/build/three.js"></script>
+  <script  src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+	<script type="text/javascript" src="dat.gui.min.js"></script>
+
+  <script>
+	// Jacob Knudson (3605742) Project
+      "use strict";
+			var renderer;
+			var scene;
+			var aspect;
+			var camera;
+			var cameraControls;
+			let bubbles = new Array();
+			var index = 0;
+			var oldNumBubbles = 0;
+			var tempBubble;
+			var swapped = false;
+			var done = false;
+			var speed = new SpeedControl(0);
+			var distanceAway;
+			var numBubbles = new NumberBubblesControl(25);
+			var directionalLight;
+			var backLight;
+			var ambientLight;
+			var sideLight1;
+			var sideLight2;
+			NumberBubblesControl.prototype.setBubbles = function()
+			{
+				this.bubbles = Math.floor(this.bubbles);
+				init();
+			}
+			var actualDistance;
+			var material;
+			var selectedMaterial;
+			var sorted;
+			var counter;
+			var xCoord;
+			var even = false;
+			var start = false;
+			var first = true;
+			var colorList = [0xFF0000, 0xEB00FF, 0x0800FF, 0x00EAFF, 0x08FF00, 0xF0FF00];
+			var num = 0;
+			var count = 0;
+
+      function mainFunction()
+			{
+        renderer = new THREE.WebGLRenderer( { antialias: true } );
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        renderer.setPixelRatio( window.devicePixelRatio );
+        renderer.setClearColor (0x8F8F8F, 1);
+
+        document.body.appendChild( renderer.domElement );
+
+        scene = new THREE.Scene();
+
+        aspect = window.innerWidth / window.innerHeight;
+
+				camera = new THREE.PerspectiveCamera( 60, aspect, 1, 100000 );
+				camera.position.x = 0;
+				camera.position.y = 0;
+        camera.position.z = -5000;
+
+				ambientLight = new THREE.AmbientLight(0xFFFFFF, 0.5);
+				directionalLight = new THREE.DirectionalLight(0xFFFFFF);
+				backLight = new THREE.DirectionalLight(0xFFFFFF);
+				sideLight1 = new THREE.DirectionalLight(0xFFFFFF, 0.5);
+				sideLight2 = new THREE.DirectionalLight(0xFFFFFF, 0.5);
+
+        //cameraControls.addEventListener("change",render,false);
+        window.addEventListener("resize",resize, false);
+
+				selectedMaterial = new THREE.MeshLambertMaterial({ color : 0x000FF, wireframe: false})
+
+				init(numBubbles.bubbles);
+
+				var gui = new dat.GUI();
+				var controls = gui.addFolder('Controls');
+				controls.add(numBubbles, 'bubbles', 10, 100).listen();
+				controls.add(speed, 'speed', 0, 250).listen();
+				var startButton = { start:function(){ start = true; }};
+				var stopButton = { stop:function(){ start = false;}}
+				gui.add(numBubbles, 'setBubbles').name('Reset');
+				gui.add(startButton, 'start').name('Start');
+				gui.add(stopButton, 'stop').name('Stop');
+				controls.open();
+
+				scene.add(camera);
+				scene.add(ambientLight);
+				scene.add(directionalLight);
+				scene.add(backLight);
+				scene.add(sideLight1);
+				scene.add(sideLight2);
+
+				render();
+      }
+
+			let init = function ()
+			{
+				let i = 0;
+				let currentY = -((numBubbles.bubbles/2)*210);
+				distanceAway = 210;
+
+				let randomNum;
+
+				let geometry;
+				let material;
+				let color;
+				let mesh;
+
+				index = 0;
+				done = false;
+				first = true;
+				start = false;
+				sorted = numBubbles.bubbles - 1;
+
+				// Remove old bubbles
+				while (i < oldNumBubbles)
+				{
+					scene.remove(bubbles[i].mesh);
+					bubbles[i].mesh.geometry.dispose();
+					bubbles[i].mesh.material.dispose();
+					bubbles[i].mesh = undefined;
+					i++;
+				}
+
+				oldNumBubbles = numBubbles.bubbles;
+
+				i = 0;
+
+				while(i < numBubbles.bubbles)
+				{
+					randomNum = generateRandomNum(0,100);
+					//geometry = new THREE.SphereGeometry(10 + randomNum, 30, 30);
+					geometry = new THREE.CubeGeometry(5 + (randomNum) * 10, 100, 5 + (randomNum) * 10);
+					material = new THREE.MeshLambertMaterial({ color : 0xFFFFFF, wireframe: false});
+
+					color = new THREE.Color(0, (randomNum/99) * 255, ((99-randomNum)/99) * 255);
+					material.color.set(color);
+
+					mesh = new THREE.Mesh(geometry, material);
+
+					mesh.position.y = currentY;
+					currentY += distanceAway;
+
+					bubbles[i] = new Bubble(mesh, randomNum, color);
+					bubbles[i].mesh.material.color.set(color);
+					scene.add(mesh);
+					i++;
+				}
+
+				cameraControls = new THREE.OrbitControls( camera, renderer.domElement  );
+				cameraControls.target = new THREE.Vector3(0,0,0);
+				camera.position.x = 0;
+				camera.position.y = 0;
+				camera.position.z = -(numBubbles.bubbles * 250);
+				cameraControls.update();
+				directionalLight.position.set(camera.position.x, camera.position.y, camera.position.z);
+				backLight.position.set(camera.position.x, camera.position.y, -camera.position.z);
+				sideLight1.position.set(-1000, 0, 0);
+				sideLight2.position.set(1000, 0, 0);
+			}
+
+			let render = function ()
+			{
+				if (!done)
+				{
+					// If we are not done, indicate the currently selected bubble
+					for (counter = 0; counter < oldNumBubbles; counter++)
+					{
+						if (counter == index)
+						{
+							bubbles[counter].mesh.material.color.set(new THREE.Color(0xFF0000));
+						}
+						else
+						{
+							var flo = 1 - (bubbles[counter].randomNum/99);
+							bubbles[counter].mesh.material.color.set(new THREE.Color(flo, flo, 1));
+							//bubbles[counter].mesh.material.color.set(new THREE.Color(0, 0, 255));
+						}
+
+					}
+				}
+				else
+				{
+					// If we are done, display rainbow animation just for fun
+
+					for (counter = 0; counter < oldNumBubbles; counter++)
+					{
+						//bubbles[counter].mesh.material = new THREE.MeshLambertMaterial({color: 0xFFFFFF, wireframe: false});
+						bubbles[counter].mesh.material.color.set(new THREE.Color(colorList[Math.round((((count + counter)/6) % 6))]));
+					}
+
+					count++;
+				}
+
+				if (!start && !first)
+				{
+					index = 0;
+					return;
+				}
+
+				if (index == sorted)
+				{
+					sorted -=1;
+					if (!swapped)
+					{
+						done = true;
+					}
+					else
+					{
+						if (index == 0)
+						{
+							done = true;
+						}
+						index = 0;
+						swapped = false;
+					}
+				}
+
+				requestAnimationFrame(render);
+
+				if (!done)
+				{
+					if (bubbles[index].randomNum > bubbles[index+1].randomNum && start)
+					{
+						swapped = true;
+						actualDistance = bubbles[index].mesh.position.y - bubbles[index+1].mesh.position.y;
+
+						if (actualDistance < distanceAway)
+						{
+							if (actualDistance + (2*speed.speed) >= distanceAway)
+							{
+								bubbles[index].mesh.position.y += (distanceAway - actualDistance)/2 + 1;
+								bubbles[index+1].mesh.position.y -= (distanceAway - actualDistance)/2 + 1;
+								bubbles[index].mesh.position.x = 0;
+								bubbles[index+1].mesh.position.x = 0;
+								bubbles[index].mesh.position.z = 0;
+								bubbles[index+1].mesh.position.z = 0;
+
+								if (even == true)
+								{
+									even = false;
+								}
+								else
+								{
+									even = true;
+								}
+							}
+							else
+							{
+								bubbles[index].mesh.position.y += speed.speed;
+								bubbles[index+1].mesh.position.y -= speed.speed;
+
+								// Sin function to animate bubbles waving back and forth
+								xCoord = distanceAway * Math.cos(Math.asin(((210 - actualDistance)/210)- 1));
+
+								if (even)
+								{
+									xCoord *= -1;
+								}
+
+								bubbles[index].mesh.position.x = xCoord;
+								bubbles[index+1].mesh.position.x = -xCoord;
+								bubbles[index].mesh.position.z = -xCoord;
+								bubbles[index+1].mesh.position.z = xCoord;
+							}
+
+						}
+						else
+						{
+							tempBubble = bubbles[index+1];
+							bubbles[index+1] = bubbles[index];
+							bubbles[index] = tempBubble;
+
+							index++;
+						}
+					}
+					else
+					{
+						if (start)
+						{
+							index++;
+						}
+					}
+				}
+				else
+				{
+
+				}
+				renderer.render( scene, camera );
+			};
+
+			function resize()
+			{
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				render();
+			}
+
+			function Bubble(mesh, randomNumber, color)
+			{
+				this.mesh = mesh,
+				this.randomNum = randomNumber,
+				this.color = color
+			}
+
+			function SpeedControl(speed)
+			{
+				this.speed = speed;
+			}
+
+			function NumberBubblesControl(numBubbles)
+			{
+				this.bubbles = numBubbles;
+			}
+
+			function generateRandomNum(minValue, maxValue)
+			{
+				return Math.floor(Math.random() * (maxValue-minValue) + minValue);
+			}
+
+    </script>
+  </head>
+  <body onload="mainFunction();">
+		<h1>Bubble Sort Visualization</h1>
+  </body>
+</html>
