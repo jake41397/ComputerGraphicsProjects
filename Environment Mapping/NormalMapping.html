@@ -1,0 +1,143 @@
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+  <title>Assignment 6</title>
+  <script  src="https://threejs.org/build/three.js"></script>
+  <script  src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+
+  <script id="vertexShader" type="x-shader/x-vertex">
+    precision highp float;
+
+    attribute vec3 position;
+    attribute vec3 normal;
+		attribute vec2 uv;
+
+    uniform mat4 modelViewMatrix;
+		uniform mat4 viewMatrix;
+    uniform mat4 projectionMatrix;
+    uniform mat3 normalMatrix; // inverse transpose of modelViewMatrix
+
+    varying vec2 vUV;
+		varying vec3 vNormal;
+		varying vec3 vPosition;
+		varying vec3 vertexNormal;
+		varying vec3 vertexPosition;
+
+    void main()
+		{
+      vUV = uv;
+			vNormal = normalize(normalMatrix * normal);
+			vPosition = (modelViewMatrix*vec4(position, 1.0)).xyz;
+      gl_Position = projectionMatrix*modelViewMatrix*vec4(position, 1.0 );
+			vertexPosition = (normalMatrix*position).xyz;
+			vertexNormal = (modelViewMatrix * vec4(normal, 1.0)).xyz;
+    }
+  </script>
+
+  <script id="fragmentShader" type="x-shader/x-fragment">
+    precision highp float;
+
+		uniform samplerCube cubemap;
+		uniform vec3 lightPosition;
+		uniform mat4 viewMatrix;
+		uniform vec3 cameraPosition;
+
+		varying vec2 vUV;
+		varying vec3 vNormal;
+		varying vec3 vPosition;
+		varying vec3 vertexNormal;
+		varying vec3 vertexPosition;
+
+    void main()
+		{
+			// Do Lambertian lighting computation
+			//vec3 N = normalize((viewMatrix * vec4(vertexNormal, 1.0)).xyz);
+			vec3 N = normalize(vNormal);
+			vec3 L = normalize((viewMatrix * vec4(lightPosition, 1.0)).xyz - vPosition);
+			float NdotL = clamp(dot(N,L), 0.5, 1.5);
+
+			// Environment Mapping Code
+			vec3 I = normalize(vPosition);
+			vec3 R = reflect(I, N);
+			mat3 vM = mat3(viewMatrix);
+			vec3 R_in_worldspace = vec3(dot(vM[0],R),dot(vM[1],R),dot(vM[2],R));
+			vec4 envMapColor = textureCube(cubemap, R_in_worldspace);
+
+			gl_FragColor = envMapColor * NdotL;
+    }
+  </script>
+
+  <script>
+      "use strict";
+			var renderer;
+			var scene;
+			var aspect;
+			var camera;
+			var cameraControls;
+
+      function mainFunction()
+			{
+        renderer = new THREE.WebGLRenderer( { antialias: true } );
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        renderer.setPixelRatio( window.devicePixelRatio );
+        renderer.setClearColor (0x8888FF, 1);
+
+        document.body.appendChild( renderer.domElement );
+
+        scene = new THREE.Scene();
+
+        aspect = window.innerWidth / window.innerHeight;
+
+				camera = new THREE.PerspectiveCamera( 60, aspect, 1, 100 );
+        camera.position.y = 1;
+        camera.position.z = 20;
+
+				// Create cubemap
+				let loader = new THREE.CubeTextureLoader();
+				loader.setPath("./cubemap/");
+				let textureCube = loader.load( ["posx.jpg", "negx.jpg", "posy.jpg", "negy.jpg", "posz.jpg", "negz.jpg"]);
+
+        let material = new THREE.RawShaderMaterial({
+            side: THREE.DoubleSide,
+            fragmentShader: document.getElementById('fragmentShader').textContent,
+            vertexShader: document.getElementById('vertexShader').textContent,
+            uniforms:
+						{
+            	mattColor: { type: "v3", value: new THREE.Vector3(0.0,0.5,0.5) },
+							lightPosition: { type: "v3", value: new THREE.Vector3(0.0, 0.0, 100.0)},
+							cubemap: { type: "t", value: textureCube}
+            }
+          });
+
+        let geometry = new THREE.PlaneGeometry( 15, 20 );
+
+        let field = new THREE.Mesh(geometry, material);
+
+        cameraControls = new THREE.OrbitControls( camera, renderer.domElement  );
+        cameraControls.addEventListener("change",render,false);
+        window.addEventListener("resize",resize, false);
+
+				scene.add(field);
+				scene.background = textureCube;
+				scene.add(camera);
+      }
+
+			let render = function ()
+			{
+				renderer.render( scene, camera );
+			};
+
+			function resize()
+			{
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				render();
+			}
+
+    </script>
+  </head>
+  <body onload="mainFunction();">
+		<h1>Jacob Knudson: 3605742</h1>
+  </body>
+</html>
