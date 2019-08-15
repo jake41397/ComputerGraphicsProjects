@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Assignment 2</title>
+    <script  src="https://threejs.org/build/three.js"></script>
+    <script  src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+    <script src='https://threejs.org/examples/js/libs/dat.gui.min.js'></script>
+    <script  src= "https://threejs.org/examples/js/loaders/OBJLoader.js"> </script>
+    <script src= "https://threejs.org/examples/js/loaders/MTLLoader.js"> </script>
+
+
+    <script>
+      function mainFunction()
+      {
+        let renderer = new THREE.WebGLRenderer( { antialias: true } );
+        let scene = new THREE.Scene();
+        let aspect = window.innerWidth / window.innerHeight;
+        let camera = new THREE.PerspectiveCamera( 50, aspect, 1, 1000 );
+        let cameraControls = new THREE.OrbitControls( camera, renderer.domElement  );
+        let mtlLoader = new THREE.MTLLoader();
+        let keyLight = new THREE.AmbientLight(0xFFFFFF, 1.0);
+        var bBox = new THREE.Box3();
+        var boxCenter = new THREE.Vector3();
+        var boxSize = new THREE.Vector3();
+        var boxDiagonal;
+        var loadingManager = new THREE.LoadingManager();
+        var RESOURCES_LOADED = false;
+
+        loadingManager.onProgress = function(item, loaded, total)
+        {
+          console.log(item, loaded, total);
+        };
+
+        loadingManager.onLoad = function()
+        {
+          console.log("loaded all resources");
+          RESOURCES_LOADED = true;
+          onResourcesLoaded();
+        };
+
+
+        var models =
+        {
+          tree1:
+          {
+            obj:'./tree01.obj',
+            mtl:'./tree01.mtl',
+            mesh:null
+          },
+          tree2:
+          {
+            obj:'./tree02.obj',
+            mtl:'./tree02.mtl',
+            mesh:null
+          },
+          tree3:
+          {
+            obj:'./tree03.obj',
+            mtl:'./tree03.mtl',
+            mesh:null
+          },
+          car:
+          {
+            obj:'./Avent.obj',
+            mtl:'./Avent.mtl',
+            mesh:null
+          }
+        };
+
+        var meshes = {};
+
+        let geometry = new THREE.BoxGeometry(10, 10, 10);
+        let material = new THREE.MeshBasicMaterial({color: 0xFF0000, wireframe: true});
+        let cube = new THREE.Mesh(geometry, material);
+
+        let texture = new THREE.TextureLoader().load("./textures/texture.jpg");
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(2, 2);
+        let materialFloor = new THREE.MeshLambertMaterial({map:texture});
+        let meshFloor = new THREE.Mesh(new THREE.PlaneGeometry(50, 50), materialFloor);
+        meshFloor.material.side = THREE.DoubleSide;
+        meshFloor.rotation.x = -Math.PI / 2;
+
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        renderer.setPixelRatio( window.devicePixelRatio );
+        renderer.setClearColor (0x999999, 1);
+        document.body.appendChild( renderer.domElement );
+
+        let fillLight = new THREE.DirectionalLight(0xFFFFFF, 0.5);
+        let backLight = new THREE.DirectionalLight(0xFFFFFF, 0.5);
+        let sideLight = new THREE.DirectionalLight(0x00FF00, 0.5);
+        let otherSideLight = new THREE.DirectionalLight(0x000FF, 0.5);
+        let topLight = new THREE.DirectionalLight(0xFFFFFF, 0.5);
+
+        render = function ()
+        {
+          renderer.render( scene, camera );
+        };
+
+
+
+        /*
+        mtlLoader.load('Avent.mtl',
+        function(mtl)
+        {
+          let objLoader = new THREE.OBJLoader();
+          objLoader.setMaterials(mtl);
+          objLoader.load('Avent.obj', function(object)
+          {
+            car = object;
+            scene.add(object);
+
+            bBox.setFromObject(object);
+            bBox.getCenter(boxCenter);
+            bBox.getSize(boxSize);
+            boxDiagonal = boxSize.length();
+
+            camera.position.x = -15;
+            camera.position.y = 10;
+            camera.position.z = boxCenter.z + 4 * boxDiagonal;
+            camera.lookAt(boxCenter);
+            camera.far = boxDiagonal * 10;
+            camera.updateProjectionMatrix();
+            cameraControls.target = boxCenter;
+            fillLight.position.set(boxCenter.x, boxCenter.y, boxCenter.z + 1.5 * boxDiagonal);
+            backLight.position.set(boxCenter.x, boxCenter.y, boxCenter.z - 1.5 * boxDiagonal);
+            topLight.position.set(boxCenter.x, boxCenter.y + 1.5 * boxDiagonal, boxCenter.z);
+            sideLight.position.set(boxCenter.x + 1.5 * boxDiagonal, boxCenter.y, boxCenter.z);
+            otherSideLight.position.set(boxCenter.x - 1.5 * boxDiagonal, boxCenter.y, boxCenter.z);
+
+            console.log(object.position);
+            render();
+          });
+        }
+        );
+
+        mtlLoader.load('Palm.mtl',
+        function(mtl)
+        {
+          let objLoader = new THREE.OBJLoader();
+          objLoader.setMaterials(mtl);
+          objLoader.load('Palm.obj', function(object)
+          {
+            palm = object;
+            scene.add(object);
+            console.log(object.position);
+            render();
+          });
+        }
+        );
+        */
+
+        // Runs when all resources are loaded
+        function onResourcesLoaded()
+        {
+          meshes["car"] = models.car.mesh.clone();
+          meshes["car2"] = models.car.mesh.clone();
+          meshes["tree1"] = models.tree1.mesh.clone();
+          meshes["tree2"] = models.tree2.mesh.clone();
+          meshes["tree3"] = models.tree3.mesh.clone();
+          meshes["tree4"] = models.tree3.mesh.clone();
+          meshes["tree5"] = models.tree2.mesh.clone();
+          meshes["tree6"] = models.tree1.mesh.clone();
+
+          bBox.setFromObject(meshes["car"]);
+          bBox.getCenter(boxCenter);
+          bBox.getSize(boxSize);
+          boxDiagonal = boxSize.length();
+
+          camera.position.x = -15;
+          camera.position.y = 10;
+          camera.position.z = boxCenter.z + 4 * boxDiagonal;
+          camera.lookAt(boxCenter);
+          camera.far = boxDiagonal * 10;
+          camera.updateProjectionMatrix();
+          cameraControls.target = boxCenter;
+          fillLight.position.set(boxCenter.x, boxCenter.y, boxCenter.z + 1.5 * boxDiagonal);
+          backLight.position.set(boxCenter.x, boxCenter.y, boxCenter.z - 1.5 * boxDiagonal);
+          topLight.position.set(boxCenter.x, boxCenter.y + 1.5 * boxDiagonal, boxCenter.z);
+          sideLight.position.set(boxCenter.x + 1.5 * boxDiagonal, boxCenter.y, boxCenter.z);
+          otherSideLight.position.set(boxCenter.x - 1.5 * boxDiagonal, boxCenter.y, boxCenter.z);
+
+          meshes["car"].position.x = 0;
+          meshes["car"].position.y = 0;
+          meshes["car"].scale.set(0.75, 0.75, 0.75);
+
+          meshes["car2"].position.z = 5;
+
+          meshes["tree1"].position.x = 15;
+          meshes["tree1"].position.z = 15;
+
+          meshes["tree2"].position.x = -10;
+          meshes["tree2"].position.z = 15;
+
+          meshes["tree3"].position.x = -10;
+          meshes["tree3"].position.z = -5;
+
+          meshes["tree4"].position.x = 15;
+          meshes["tree4"].position.z = 2;
+
+          meshes["tree5"].position.x = 5;
+          meshes["tree5"].position.z = -8;
+
+          meshes["tree6"].position.x = -5;
+          meshes["tree6"].position.z = 2;
+
+          scene.add(meshes["car"]);
+          scene.add(meshes["car2"]);
+          scene.add(meshes["tree1"]);
+          scene.add(meshes["tree2"]);
+          scene.add(meshes["tree3"]);
+          scene.add(meshes["tree4"]);
+          scene.add(meshes["tree5"]);
+          scene.add(meshes["tree6"]);
+
+          render();
+        }
+
+        function resize ()
+        {
+          renderer.setSize(window.innerWidth, window.innerHeight);
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.position.z = boxCenter.z + 1.5 * boxDiagonal;
+          camera.lookAt(boxCenter);
+          camera.far = boxDiagonal * 10;
+          cameraControls.target = boxCenter;
+          camera.updateProjectionMatrix();
+          render();
+        };
+
+        scene.add(camera);
+        scene.add(keyLight);
+        scene.add(backLight);
+        scene.add(fillLight);
+        scene.add(topLight);
+        scene.add(sideLight);
+        scene.add(otherSideLight);
+
+        scene.add(meshFloor);
+        cameraControls.addEventListener("change", render, false);
+        window.addEventListener("resize", resize, false);
+
+        // Load Models
+        for( var _key in models )
+        {
+		      (function(key)
+          {
+            var mtlLoader = new THREE.MTLLoader(loadingManager);
+			      mtlLoader.load(models[key].mtl, function(materials)
+            {
+		          materials.preload();
+				      var objLoader = new THREE.OBJLoader(loadingManager);
+
+				      objLoader.setMaterials(materials);
+				      objLoader.load(models[key].obj, function(mesh)
+              {
+                mesh.traverse(function(node)
+                {
+						      if( node instanceof THREE.Mesh )
+                  {
+                    node.castShadow = true;
+							      node.receiveShadow = true;
+						      }
+					      });
+                models[key].mesh = mesh;
+				      });
+			       });
+		       })(_key);
+        }
+
+        render();
+      }
+    </script>
+  </head>
+  <body onload="mainFunction();">
+  <h1>Jacob Knudson: 3605742</h1>
+  </body>
+</html>
